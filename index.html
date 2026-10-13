@@ -9,7 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     
     <script>
         tailwind.config = {
@@ -19,6 +19,7 @@
                         brand: {
                             50: '#f0f3ff',
                             100: '#e0e7ff',
+                            200: '#c7d2fe',
                             500: '#6366f1',
                             600: '#4f46e5',
                             700: '#4338ca',
@@ -142,7 +143,7 @@
         <main id="screen-home" class="screen active justify-between">
             <div class="pt-6 pb-4 text-center">
                 <div class="inline-flex items-center gap-2 bg-indigo-100 text-brand-700 font-bold text-xs px-3.5 py-1.5 rounded-full mb-6">
-                    <span>⚡️ 2030 맞춤 AI 성향 진단</span>
+                    <span>⚡️ 2026 AI 성향 진단</span>
                     <span class="w-1 h-1 rounded-full bg-brand-500"></span>
                     <span>16문항 / 3분 소요</span>
                 </div>
@@ -297,10 +298,13 @@
                 <button onclick="shareResult()" class="w-full bg-slate-900 hover:bg-black active:bg-slate-800 text-white font-bold text-base py-3.5 rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
                     <span>🔗</span> 결과 링크 복사하기
                 </button>
+                <button id="btn-take-test-too" onclick="restartQuiz()" class="hidden w-full bg-brand-600 hover:bg-brand-700 text-white font-bold text-base py-3.5 rounded-2xl shadow-md shadow-brand-600/30 transition-all">
+                    ⚡️ 테스트 나도 해보기
+                </button>
                 <button onclick="openEncyclopedia()" class="w-full bg-brand-50 hover:bg-brand-100 text-brand-700 font-bold text-base py-3.5 rounded-2xl transition-all">
                     16가지 전체 유형 도감 탐색
                 </button>
-                <button onclick="restartQuiz()" class="w-full bg-white hover:bg-slate-50 text-slate-500 border border-slate-200 font-bold text-xs py-3 rounded-2xl transition-all">
+                <button id="btn-restart-quiz" onclick="restartQuiz()" class="w-full bg-white hover:bg-slate-50 text-slate-500 border border-slate-200 font-bold text-xs py-3 rounded-2xl transition-all">
                     테스트 다시 하기
                 </button>
             </div>
@@ -537,7 +541,7 @@
                 catIndex: '4 / 4',
                 text: 'AI 대화창을 새로 열고 대화를 시작할 때',
                 options: [
-                    { text: '인사 없이 바로 볼론이나 요구사항만 텍스트로 입력한다', type: 'T' },
+                    { text: '인사 없이 바로 본론이나 요구사항만 텍스트로 입력한다', type: 'T' },
                     { text: "'안녕', '오늘도 잘 부탁해' 같은 인사를 자연스럽게 적는다", type: 'P' }
                 ]
             },
@@ -590,13 +594,14 @@
         };
 
         // ==========================================
-        // 2. STATE MANAGEMENT
+        // 2. STATE MANAGEMENT & INITIALIZATION
         // ==========================================
 
         let currentQuestionIndex = 0;
-        let userAnswers = []; // 선택 내역 추적 (이전 버튼 지원)
+        let userAnswers = [];
         let scores = { S: 0, E: 0, A: 0, D: 0, C: 0, R: 0, T: 0, P: 0 };
         let activeResultType = null;
+        let isSharedResultMode = false;
 
         const loadingMessages = [
             "당신의 질문 패턴을 분석하는 중...",
@@ -604,6 +609,28 @@
             "AI와의 친밀도 데이터 계산 중...",
             "16가지 유형 데이터베이스 대조 중..."
         ];
+
+        // 페이지 로드시 URL 쿼리 파라미터(?type=CODE) 확인
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const typeParam = urlParams.get('type');
+
+            if (typeParam && typesData[typeParam.toUpperCase()]) {
+                isSharedResultMode = true;
+                activeResultType = typeParam.toUpperCase();
+                
+                // 임의 수치 할당 (공유받은 경우 그래프 중앙 표현)
+                scores = { S: 2, E: 2, A: 2, D: 2, C: 2, R: 2, T: 2, P: 2 };
+                
+                renderResultReport(activeResultType);
+                
+                // '테스트 나도 해보기' 버튼 노출
+                document.getElementById('btn-take-test-too').classList.remove('hidden');
+                document.getElementById('btn-restart-quiz').innerText = "다시 테스트하기";
+                
+                showScreen('result');
+            }
+        });
 
         // ==========================================
         // 3. CORE NAVIGATION & LOGIC
@@ -620,6 +647,8 @@
 
         function handleLogoClick() {
             if (confirm("테스트 메인 화면으로 이동하시겠습니까?")) {
+                // URL 쿼리 파라미터 제거
+                window.history.pushState({}, document.title, window.location.pathname);
                 restartQuiz();
             }
         }
@@ -633,6 +662,10 @@
         }
 
         function restartQuiz() {
+            window.history.pushState({}, document.title, window.location.pathname);
+            isSharedResultMode = false;
+            document.getElementById('btn-take-test-too').classList.add('hidden');
+            document.getElementById('btn-restart-quiz').innerText = "테스트 다시 하기";
             startQuiz();
             showScreen('home');
         }
@@ -724,6 +757,10 @@
             const finalCode = `${pCode}${aCode}${tCode}${rCode}`;
             activeResultType = finalCode;
             
+            // 결과 URL 파라미터 반영 (새로고침 없이)
+            const newUrl = window.location.origin + window.location.pathname + '?type=' + finalCode;
+            window.history.pushState({ path: newUrl }, '', newUrl);
+
             renderResultReport(finalCode);
             showScreen('result');
         }
@@ -789,7 +826,7 @@
         }
 
         // ==========================================
-        // 4. ENCYCLOPEDIA & MODAL
+        // 4. ENCYCLOPEDIA & MODAL & SHARING
         // ==========================================
 
         function openEncyclopedia() {
@@ -864,18 +901,19 @@
             document.getElementById('type-modal').classList.add('hidden');
         }
 
-        // 결과 링크 클립보드 복사
+        // 결과 동적 URL 쿼리 파라미터 클립보드 복사
         function shareResult() {
-            const currentUrl = window.location.href;
+            const targetType = activeResultType || 'SACT';
+            const shareUrl = window.location.origin + window.location.pathname + '?type=' + targetType;
             
             if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(currentUrl).then(() => {
-                    showToast("결과 링크가 클립보드에 복사되었습니다!");
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                    showToast("결과 공유 링크가 클립보드에 복사되었습니다!");
                 }).catch(() => {
-                    copyFallback(currentUrl);
+                    copyFallback(shareUrl);
                 });
             } else {
-                copyFallback(currentUrl);
+                copyFallback(shareUrl);
             }
         }
 
@@ -886,7 +924,7 @@
             textArea.select();
             try {
                 document.execCommand('copy');
-                showToast("결과 링크가 클립보드에 복사되었습니다!");
+                showToast("결과 공유 링크가 클립보드에 복사되었습니다!");
             } catch (err) {
                 showToast("링크 복사에 실패했습니다.");
             }
@@ -901,7 +939,7 @@
             setTimeout(() => {
                 toast.classList.remove('opacity-100');
                 toast.classList.add('opacity-0');
-            }, 2000);
+            }, 2200);
         }
     </script>
 </body>
