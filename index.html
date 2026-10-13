@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI 사용 성향 테스트 (AITI)</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f3ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        },
+                        accent: '#f59e0b',
+                    },
+                    fontFamily: {
+                        sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'Roboto', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* 모바일 타이포그래피 최적화: 줄바꿈 단어 보존 */
+        *, ::before, ::after {
+            word-break: keep-all;
+            overflow-wrap: break-word;
+        }
+
+        body {
+            background-color: #0f172a;
+            font-family: 'Pretendard', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            margin: 0;
+            padding: 0;
+            color: #1e293b;
+        }
+
+        /* 모바일 뷰포트 컨테이너 최적화 */
+        .app-shell {
+            max-width: 440px;
+            margin: 0 auto;
+            background-color: #f8fafc;
+            min-height: 100vh;
+            min-height: 100dvh;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+            padding: 20px 20px 32px 20px;
+            animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 커스텀 버튼 터치 반응형 스타일 */
+        .btn-card {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid #e2e8f0;
+        }
+        .btn-card:active {
+            transform: scale(0.98);
+            border-color: #6366f1;
+            background-color: #f0f3ff;
+        }
+
+        /* 로딩 스피너 애니메이션 */
+        @keyframes spinCustom {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .animate-spin-custom {
+            animation: spinCustom 1.2s linear infinite;
+        }
+
+        /* 모달 스타일 */
+        .modal-overlay {
+            background-color: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(4px);
+        }
+
+        /* 스크롤바 숨기기 (유형 도감 탭 내) */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-shell">
+        
+        <!-- 상단 고정 헤더 -->
+        <header class="py-3.5 px-5 bg-white/90 backdrop-blur-md flex justify-between items-center border-b border-slate-100 sticky top-0 z-30">
+            <button onclick="handleLogoClick()" class="flex items-center gap-2 focus:outline-none text-left">
+                <span class="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center text-white font-black text-sm shadow-md shadow-brand-500/20">AI</span>
+                <span class="font-extrabold text-slate-800 tracking-tight text-lg">AITI <span class="text-xs text-brand-600 font-bold bg-brand-50 px-1.5 py-0.5 rounded-md border border-brand-100">테스트</span></span>
+            </button>
+            <button onclick="openEncyclopedia()" class="text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors px-3 py-1.5 rounded-full flex items-center gap-1">
+                <span>📚</span> 유형 도감
+            </button>
+        </header>
+
+        <!-- 1. 메인 화면 (Home) -->
+        <main id="screen-home" class="screen active justify-between">
+            <div class="pt-6 pb-4 text-center">
+                <div class="inline-flex items-center gap-2 bg-indigo-100 text-brand-700 font-bold text-xs px-3.5 py-1.5 rounded-full mb-6">
+                    <span>⚡️ 2030 맞춤 AI 성향 진단</span>
+                    <span class="w-1 h-1 rounded-full bg-brand-500"></span>
+                    <span>16문항 / 3분 소요</span>
+                </div>
+                
+                <div class="text-6xl my-4 animate-bounce">🤖💭</div>
+                
+                <h1 class="text-3xl font-extrabold text-slate-900 leading-tight mb-4">
+                    나는 AI를 어떻게<br>사용하고 있을까?
+                </h1>
+                
+                <p class="text-slate-600 text-base leading-relaxed px-2 mb-8">
+                    MBTI처럼 알아보는 나만의 AI 사용 성향!<br>
+                    작업 방식부터 질문 스타일, 대화 태도까지<br>
+                    나에게 딱 맞는 AI 페르소나를 찾아보세요.
+                </p>
+
+                <!-- 4개 지표 간략 설명 요약 카드 -->
+                <div class="grid grid-cols-2 gap-2.5 text-left bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mb-6">
+                    <div class="p-2.5 bg-slate-50 rounded-xl">
+                        <div class="text-xs font-bold text-brand-600 mb-0.5">1. 목적 (Purpose)</div>
+                        <div class="text-xs font-semibold text-slate-700">해결사(S) vs 탐험가(E)</div>
+                    </div>
+                    <div class="p-2.5 bg-slate-50 rounded-xl">
+                        <div class="text-xs font-bold text-brand-600 mb-0.5">2. 질문 (Prompting)</div>
+                        <div class="text-xs font-semibold text-slate-700">건축가(A) vs 스케치북(D)</div>
+                    </div>
+                    <div class="p-2.5 bg-slate-50 rounded-xl">
+                        <div class="text-xs font-bold text-brand-600 mb-0.5">3. 신뢰 (Trust)</div>
+                        <div class="text-xs font-semibold text-slate-700">팩트체커(C) vs 수용자(R)</div>
+                    </div>
+                    <div class="p-2.5 bg-slate-50 rounded-xl">
+                        <div class="text-xs font-bold text-brand-600 mb-0.5">4. 관계 (Relation)</div>
+                        <div class="text-xs font-semibold text-slate-700">도구(T) vs 파트너(P)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-3 pt-2">
+                <button onclick="startQuiz()" class="w-full bg-brand-600 hover:bg-brand-700 active:bg-brand-900 text-white font-bold text-lg py-4 rounded-2xl shadow-lg shadow-brand-600/30 transition-all flex items-center justify-center gap-2">
+                    <span>AITI 테스트 시작하기</span>
+                    <span>→</span>
+                </button>
+                <button onclick="openEncyclopedia()" class="w-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-sm py-3 rounded-2xl transition-all">
+                    16가지 전체 유형 먼저 구경하기
+                </button>
+            </div>
+        </main>
+
+        <!-- 2. 진단 진행 화면 (Quiz) -->
+        <main id="screen-quiz" class="screen justify-between">
+            <div>
+                <!-- 카테고리 뱃지 & 프로그레스 -->
+                <div class="flex items-center justify-between mb-3">
+                    <span id="category-badge" class="bg-brand-50 text-brand-700 font-bold text-xs px-3 py-1 rounded-lg border border-brand-100">
+                        카테고리 1. 목적 (Purpose)
+                    </span>
+                    <span id="question-counter" class="text-xs font-extrabold text-slate-500">
+                        1 / 16
+                    </span>
+                </div>
+
+                <div class="w-full bg-slate-200 rounded-full h-2.5 mb-6 overflow-hidden">
+                    <div id="progress-bar" class="bg-brand-600 h-2.5 rounded-full transition-all duration-300" style="width: 6.25%"></div>
+                </div>
+
+                <!-- 질문 문항 -->
+                <div class="min-h-[110px] flex items-center justify-center my-4">
+                    <h2 id="question-text" class="text-xl font-bold text-slate-900 text-center leading-snug">
+                        질문 텍스트가 표시됩니다.
+                    </h2>
+                </div>
+
+                <!-- 선택지 버튼 -->
+                <div class="space-y-3.5 my-6">
+                    <button onclick="selectOption(0)" id="option-0" class="btn-card w-full bg-white rounded-2xl p-4 text-left shadow-sm flex items-start gap-3">
+                        <span class="w-7 h-7 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center flex-shrink-0 mt-0.5">A</span>
+                        <span id="option-0-text" class="text-slate-800 font-semibold text-base leading-snug">선택지 A 내용</span>
+                    </button>
+
+                    <button onclick="selectOption(1)" id="option-1" class="btn-card w-full bg-white rounded-2xl p-4 text-left shadow-sm flex items-start gap-3">
+                        <span class="w-7 h-7 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center flex-shrink-0 mt-0.5">B</span>
+                        <span id="option-1-text" class="text-slate-800 font-semibold text-base leading-snug">선택지 B 내용</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 하단 이전 버튼 -->
+            <div class="pt-2">
+                <button id="btn-prev" onclick="prevQuestion()" class="text-xs font-bold text-slate-400 hover:text-slate-600 flex items-center justify-center gap-1 mx-auto py-2">
+                    <span>←</span> 이전 질문으로 돌아가기
+                </button>
+            </div>
+        </main>
+
+        <!-- 3. 결과 분석 중 화면 (Loading) -->
+        <main id="screen-loading" class="screen justify-center items-center text-center">
+            <div class="my-auto py-8">
+                <div class="w-20 h-20 border-4 border-brand-100 border-t-brand-600 rounded-full animate-spin-custom mx-auto mb-8 shadow-inner"></div>
+                
+                <h2 class="text-2xl font-extrabold text-slate-900 mb-3">AI 성향 분석 중...</h2>
+                <p id="loading-msg" class="text-brand-600 font-bold text-sm min-h-[20px] transition-all duration-300">
+                    당신의 프롬프트 습관을 파악하는 중입니다...
+                </p>
+            </div>
+        </main>
+
+        <!-- 4. 개인 결과 리포트 화면 (Result) -->
+        <main id="screen-result" class="screen">
+            <!-- 개인 결과 리포트 카드 -->
+            <div class="bg-white rounded-3xl p-6 shadow-md border border-slate-100 text-center mb-5">
+                <div class="inline-block bg-brand-50 text-brand-700 text-xs font-extrabold px-3 py-1 rounded-full mb-3" id="result-code">
+                    TYPE: SACT
+                </div>
+                <div class="text-6xl mb-3" id="result-emoji">⚙️</div>
+                <h2 class="text-2xl font-black text-slate-900 mb-2 leading-tight" id="result-title">
+                    효율 끝판왕 AI 공장장
+                </h2>
+                
+                <div class="flex flex-wrap justify-center gap-1.5 mb-5" id="result-tags">
+                    <!-- 태그 노출 -->
+                </div>
+
+                <div class="text-left bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-4">
+                    <h3 class="text-xs font-bold text-slate-400 mb-1">성향 요약</h3>
+                    <p class="text-slate-700 text-sm leading-relaxed font-medium" id="result-desc">
+                        상세 성향 설명이 들어가는 공간입니다.
+                    </p>
+                </div>
+
+                <!-- 4대 영역 상세 수치 수평 그래프 -->
+                <div class="text-left pt-2 space-y-3" id="result-bars">
+                    <!-- 막대 그래프 노출 -->
+                </div>
+            </div>
+
+            <!-- 케미 지수 (환상의 동료 / 서먹한 동료) -->
+            <div class="grid grid-cols-2 gap-3 mb-5">
+                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                    <div class="text-xs font-bold text-emerald-600 mb-1">❤️ 환상의 찰떡 콤비</div>
+                    <div class="text-sm font-extrabold text-slate-800" id="chemistry-best-title">티키타카 업무 마스터</div>
+                    <div class="text-xs font-semibold text-slate-400 mt-0.5" id="chemistry-best-code">(SDCT)</div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                    <div class="text-xs font-bold text-amber-600 mb-1">⚡️ 서로 다른 접근법</div>
+                    <div class="text-sm font-extrabold text-slate-800" id="chemistry-worst-title">엉뚱발랄 AI 짱친</div>
+                    <div class="text-xs font-semibold text-slate-400 mt-0.5" id="chemistry-worst-code">(EDRP)</div>
+                </div>
+            </div>
+
+            <!-- 하단 CTA 버튼 모음 -->
+            <div class="space-y-2.5">
+                <button onclick="shareResult()" class="w-full bg-slate-900 hover:bg-black active:bg-slate-800 text-white font-bold text-base py-3.5 rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
+                    <span>🔗</span> 결과 링크 복사하기
+                </button>
+                <button onclick="openEncyclopedia()" class="w-full bg-brand-50 hover:bg-brand-100 text-brand-700 font-bold text-base py-3.5 rounded-2xl transition-all">
+                    16가지 전체 유형 도감 탐색
+                </button>
+                <button onclick="restartQuiz()" class="w-full bg-white hover:bg-slate-50 text-slate-500 border border-slate-200 font-bold text-xs py-3 rounded-2xl transition-all">
+                    테스트 다시 하기
+                </button>
+            </div>
+        </main>
+
+        <!-- 5. 전체 유형 & 카테고리 백과사전 (Encyclopedia) -->
+        <main id="screen-encyclopedia" class="screen">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-black text-slate-900">AITI 유형 도감</h2>
+                <button onclick="closeEncyclopedia()" class="w-8 h-8 rounded-full bg-slate-200 text-slate-600 font-bold flex items-center justify-center">
+                    ✕
+                </button>
+            </div>
+
+            <!-- 2개 탭 버튼 -->
+            <div class="flex bg-slate-200 p-1 rounded-2xl mb-4">
+                <button id="tab-btn-types" onclick="switchEncyclopediaTab('types')" class="flex-1 py-2 text-xs font-extrabold rounded-xl transition-all bg-white text-brand-700 shadow-sm">
+                    16가지 유형 모아보기
+                </button>
+                <button id="tab-btn-categories" onclick="switchEncyclopediaTab('categories')" class="flex-1 py-2 text-xs font-extrabold text-slate-600 rounded-xl transition-all">
+                    4가지 카테고리 가이드
+                </button>
+            </div>
+
+            <!-- 탭 1: 16가지 유형 그리드 -->
+            <div id="tab-content-types" class="space-y-3">
+                <p class="text-xs font-semibold text-slate-500 text-center mb-1">
+                    각 유형을 클릭하면 상세 설명 리포트를 확인할 수 있습니다.
+                </p>
+                <div class="grid grid-cols-2 gap-2.5" id="encyclopedia-grid">
+                    <!-- 16가지 유형 동적 생성 -->
+                </div>
+            </div>
+
+            <!-- 탭 2: 카테고리 설명 가이드 -->
+            <div id="tab-content-categories" class="hidden space-y-4">
+                <div class="bg-white p-4 rounded-2xl border border-slate-200">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="bg-indigo-100 text-brand-700 text-xs font-extrabold px-2.5 py-1 rounded-lg">목적 (Purpose)</span>
+                        <span class="text-sm font-bold text-slate-800">S vs E</span>
+                    </div>
+                    <p class="text-xs text-slate-600 leading-relaxed mb-2">
+                        <strong>해결사 (Solver):</strong> 명확한 효율성 중심. 업무 자동화, 코드 에러 해결, 요약 등 당장 필요한 실용적 결과물을 원함.<br>
+                        <strong>탐험가 (Explorer):</strong> 호기심과 아이디어 중심. 영감을 얻거나 상상력을 자극하는 대화 자체를 즐김.
+                    </p>
+                </div>
+
+                <div class="bg-white p-4 rounded-2xl border border-slate-200">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="bg-blue-100 text-blue-700 text-xs font-extrabold px-2.5 py-1 rounded-lg">질문 (Prompting)</span>
+                        <span class="text-sm font-bold text-slate-800">A vs D</span>
+                    </div>
+                    <p class="text-xs text-slate-600 leading-relaxed mb-2">
+                        <strong>건축가 (Architect):</strong> 페르소나, 조건, 출력 형식을 디테일하게 지시하여 한 번에 원하는 결과를 얻어냄.<br>
+                        <strong>스케치북 (Drafter):</strong> 일단 가볍게 질문을 던진 후, 답변을 확인하며 대화로 완성도를 다듬어 나감.
+                    </p>
+                </div>
+
+                <div class="bg-white p-4 rounded-2xl border border-slate-200">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="bg-teal-100 text-teal-700 text-xs font-extrabold px-2.5 py-1 rounded-lg">신뢰 (Trust)</span>
+                        <span class="text-sm font-bold text-slate-800">C vs R</span>
+                    </div>
+                    <p class="text-xs text-slate-600 leading-relaxed mb-2">
+                        <strong>팩트체커 (Checker):</strong> AI의 거짓말(할루시네이션)을 상시 경계하며 출처 확인 및 더블 체크 필수.<br>
+                        <strong>수용자 (Receiver):</strong> 그럴듯한 맥락과 아이디어를 긍정적으로 신뢰하며 유연하게 수용함.
+                    </p>
+                </div>
+
+                <div class="bg-white p-4 rounded-2xl border border-slate-200">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="bg-purple-100 text-purple-700 text-xs font-extrabold px-2.5 py-1 rounded-lg">관계 (Relationship)</span>
+                        <span class="text-sm font-bold text-slate-800">T vs P</span>
+                    </div>
+                    <p class="text-xs text-slate-600 leading-relaxed mb-2">
+                        <strong>도구 (Tool):</strong> 감정 교류가 필요 없는 철저한 비서이자 생산성 도구로 대함.<br>
+                        <strong>파트너 (Partner):</strong> 인사나 감사 표현을 건네며, 고민을 털어놓기도 하는 랜선 동료로 인식함.
+                    </p>
+                </div>
+            </div>
+        </main>
+
+        <!-- 유형 모달 팝업 -->
+        <div id="type-modal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+            <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl relative border border-slate-100 max-h-[85vh] overflow-y-auto">
+                <button onclick="closeModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 text-slate-500 font-bold flex items-center justify-center">
+                    ✕
+                </button>
+                <div class="text-center pt-2">
+                    <div id="modal-type-code" class="inline-block bg-brand-50 text-brand-700 text-xs font-extrabold px-3 py-1 rounded-full mb-2">SACT</div>
+                    <div id="modal-type-emoji" class="text-5xl mb-2">⚙️</div>
+                    <h3 id="modal-type-title" class="text-xl font-bold text-slate-900 mb-3">유형 제목</h3>
+                    <div id="modal-type-tags" class="flex flex-wrap justify-center gap-1 mb-4"></div>
+                    <p id="modal-type-desc" class="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-xl text-left border border-slate-100 mb-4">
+                        설명 내용
+                    </p>
+                    <button onclick="closeModal()" class="w-full bg-brand-600 text-white font-bold text-sm py-3 rounded-xl">
+                        확인
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 알림 팝업 토스트 -->
+        <div id="toast-msg" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white font-bold text-xs px-4 py-2.5 rounded-full shadow-lg z-50 pointer-events-none opacity-0 transition-opacity duration-300">
+            링크가 클립보드에 복사되었습니다!
+        </div>
+
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. DATA DEFINITIONS (16 Questions & 16 Types)
+        // ==========================================
+
+        const questions = [
+            // [Purpose: S (해결사) vs E (탐험가)]
+            {
+                category: 'Purpose (목적)',
+                catIndex: '1 / 4',
+                text: '주말 오후, 심심해서 AI를 켰다. 내가 건넬 첫 마디는?',
+                options: [
+                    { text: '냉장고 남은 재료로 10분 만에 만드는 자취생 레시피 알려줘', type: 'S' },
+                    { text: '만약 조선시대에 스마트폰이 있었다면 어땠을까? 소설 써줘', type: 'E' }
+                ]
+            },
+            {
+                category: 'Purpose (목적)',
+                catIndex: '1 / 4',
+                text: 'AI를 사용하며 가장 큰 뿌듯함을 느끼는 순간은?',
+                options: [
+                    { text: '복잡한 엑셀 함수나 코딩 에러를 한 번에 딱 해결해 주었을 때', type: 'S' },
+                    { text: '내 엉뚱한 아이디어에 기발하고 창의적인 답을 내놓았을 때', type: 'E' }
+                ]
+            },
+            {
+                category: 'Purpose (목적)',
+                catIndex: '1 / 4',
+                text: '해외 여행 계획을 짤 때 AI를 활용하는 모습은?',
+                options: [
+                    { text: '3박 4일 최적 동선, 일별 예산표, 필수 코스를 정리해 달라고 함', type: 'S' },
+                    { text: '남들은 잘 모르는 숨겨진 힙한 골목 분위기를 묘사해 달라고 함', type: 'E' }
+                ]
+            },
+            {
+                category: 'Purpose (목적)',
+                catIndex: '1 / 4',
+                text: '업무나 공부 중 막히는 문제가 생겼다.',
+                options: [
+                    { text: '정확한 문제 상황을 주고 명확한 해답 단 하나를 얻고자 함', type: 'S' },
+                    { text: '비슷한 사례나 시각을 다각도로 넓히기 위한 조언을 얻고자 함', type: 'E' }
+                ]
+            },
+
+            // [Prompting: A (건축가) vs D (스케치북)]
+            {
+                category: 'Prompting (질문)',
+                catIndex: '2 / 4',
+                text: 'AI에게 질문(프롬프트)을 작성할 때 나의 스타일은?',
+                options: [
+                    { text: '역할, 제한조건, 출력형식을 하나하나 꼼꼼히 설정해서 전달함', type: 'A' },
+                    { text: '일단 짧게 던져보고, 결과물을 보며 대화하듯 수정해 나감', type: 'D' }
+                ]
+            },
+            {
+                category: 'Prompting (질문)',
+                catIndex: '2 / 4',
+                text: '원하는 답변이 한 번에 나오지 않았다면?',
+                options: [
+                    { text: '처음 작성한 질문의 문맥과 제한조건을 더 정교하게 수정함', type: 'A' },
+                    { text: '"아니 그거 말고 더 유쾌하게 해봐" 라며 수다 떨듯 다시 시킴', type: 'D' }
+                ]
+            },
+            {
+                category: 'Prompting (질문)',
+                catIndex: '2 / 4',
+                text: 'SNS에서 효율적인 AI 프롬프트 가이드 글을 보았을 때',
+                options: [
+                    { text: '유용해 보이는 명령어 프롬프트 양식을 캡처하거나 저장해 둠', type: 'A' },
+                    { text: "'이런 질문도 알아듣나?' 싶어서 바로 AI 창 켜고 대충 실험함", type: 'D' }
+                ]
+            },
+            {
+                category: 'Prompting (질문)',
+                catIndex: '2 / 4',
+                text: '블로그나 보고서 작성을 맡길 때',
+                options: [
+                    { text: '목차 구조, 폰트 톤, 강조할 키워드 목록을 명시해 지시함', type: 'A' },
+                    { text: "'트렌디한 느낌으로 한 편 써봐' 하고 마음에 들 때까지 리프레시함", type: 'D' }
+                ]
+            },
+
+            // [Trust: C (팩트체커) vs R (수용자)]
+            {
+                category: 'Trust (신뢰)',
+                catIndex: '3 / 4',
+                text: 'AI가 그럴싸한 지식이나 신기한 사실을 알려주었다.',
+                options: [
+                    { text: '진짜인지 구글링이나 출처를 통해 꼭 교차 검증을 해본다', type: 'C' },
+                    { text: "'오 신기하다!' 하고 큰 의심 없이 흥미롭게 지식을 받아들인다", type: 'R' }
+                ]
+            },
+            {
+                category: 'Trust (신뢰)',
+                catIndex: '3 / 4',
+                text: 'AI의 답변에 대한 나의 기본적인 마인드는?',
+                options: [
+                    { text: '언제든 지어낸 정보(할루시네이션)가 있을 수 있어 늘 의심함', type: 'C' },
+                    { text: '대체로 훌륭한 정보이므로 맥락과 영감 위주로 긍정 수용함', type: 'R' }
+                ]
+            },
+            {
+                category: 'Trust (신뢰)',
+                catIndex: '3 / 4',
+                text: 'AI가 짜준 계산식이나 작성문이 어딘가 어색할 때',
+                options: [
+                    { text: '어느 부분에서 오차가 생겼는지 내가 원인을 직접 파악해 본다', type: 'C' },
+                    { text: "'다시 제대로 고쳐봐' 하고 AI에게 한 번 더 수정 검토를 시킨다", type: 'R' }
+                ]
+            },
+            {
+                category: 'Trust (신뢰)',
+                catIndex: '3 / 4',
+                text: '맞춤법이나 문장 교정을 부탁한 후 결과물을 받을 때',
+                options: [
+                    { text: '어떤 단어가 어떻게 수정되었는지 하나하나 눈으로 확인한다', type: 'C' },
+                    { text: '잘 고쳐졌겠거니 생각하고 이상 없어 보이면 그대로 복사해 쓴다', type: 'R' }
+                ]
+            },
+
+            // [Relationship: T (도구) vs P (파트너)]
+            {
+                category: 'Relationship (관계)',
+                catIndex: '4 / 4',
+                text: 'AI 대화창을 새로 열고 대화를 시작할 때',
+                options: [
+                    { text: '인사 없이 바로 볼론이나 요구사항만 텍스트로 입력한다', type: 'T' },
+                    { text: "'안녕', '오늘도 잘 부탁해' 같은 인사를 자연스럽게 적는다", type: 'P' }
+                ]
+            },
+            {
+                category: 'Relationship (관계)',
+                catIndex: '4 / 4',
+                text: 'AI가 매우 인상적이고 만족스러운 답변을 내놓았을 때',
+                options: [
+                    { text: '원하는 텍스트만 쏙 복사한 후 쿨하게 창을 닫는다', type: 'T' },
+                    { text: "'와 진짜 고마워!', '너 천재다' 같은 답장을 남긴다", type: 'P' }
+                ]
+            },
+            {
+                category: 'Relationship (관계)',
+                catIndex: '4 / 4',
+                text: '나에게 AI라는 존재는 어디에 가까울까?',
+                options: [
+                    { text: '내 작업 효율을 끌어올려 주는 스마트한 소프트웨어 도구', type: 'T' },
+                    { text: '함께 일하고 대화하며 티키타카를 나누는 랜선 작업 파트너', type: 'P' }
+                ]
+            },
+            {
+                category: 'Relationship (관계)',
+                catIndex: '4 / 4',
+                text: '늦은 밤, 고민거리가 생겨 생각이 복잡해졌다.',
+                options: [
+                    { text: 'AI는 작업용이다. 고민은 혼자 정리하거나 친구에게 털어놓는다', type: 'T' },
+                    { text: 'AI에게 상황을 털어놓고 위로나 객관적 의견을 물어보기도 한다', type: 'P' }
+                ]
+            }
+        ];
+
+        const typesData = {
+            'SACT': { emoji: '⚙️', title: '효율 끝판왕 AI 공장장', tags: ['#실무천재', '#오류용납불가', '#스피드형'], desc: '명확하고 정교한 지시로 오류 없는 완벽한 결과물을 빠르게 뽑아내는 실무의 신입니다. AI를 철저한 생산성 도구로 기막히게 활용합니다.', best: 'SDCT', worst: 'EDRP' },
+            'SACP': { emoji: '🧐', title: '깐깐한 AI 사수', tags: ['#츤데레', '#철저한검증', '#예의바름'], desc: '결과물 교차 검증은 철저하지만, AI가 훌륭한 답을 내면 "수고했어"라고 칭찬을 잊지 않는 외유내강형 사수 타입입니다.', best: 'SDRP', worst: 'EART' },
+            'SART': { emoji: '🚀', title: '스피드광 AI 조수', tags: ['#칼퇴마스터', '#초고속복붙', '#실용주의'], desc: '복잡한 프롬프트 없이도 핵심만 요구해 순식간에 일을 처리합니다. AI 덕분에 남들보다 늘 칼퇴를 쟁취하는 지혜로운 실용주의자입니다.', best: 'SDRT', worst: 'EACP' },
+            'SARP': { emoji: '☕', title: '외유내강 AI 멘토', tags: ['#친절한실무자', '#결과확실', '#상호존중'], desc: '결과물의 확실성을 추구하면서도 AI에게 따뜻한 존중을 건넵니다. AI와 가장 평화로우면서도 높은 효율을 유지합니다.', best: 'SDCP', worst: 'EDCT' },
+            'SDCT': { emoji: '🛠️', title: '티키타카 업무 마스터', tags: ['#대화형완성', '#의심의끈', '#완벽주의'], desc: '가벼운 질문으로 시작해 티키타카로 완성도를 높입니다. 하지만 마지막 출처 확인은 잊지 않는 치밀한 완벽주의자입니다.', best: 'SACT', worst: 'EARP' },
+            'SDCP': { emoji: '🐶', title: '다정한 AI 트레이너', tags: ['#친절한조련', '#피드백왕', '#함께성장'], desc: '지속적인 대화와 따뜻한 피드백으로 AI를 차근차근 다듬어 나갑니다. AI를 트레이닝시키듯 원하는 결과를 이끌어냅니다.', best: 'SARP', worst: 'EACT' },
+            'SDRT': { emoji: '🏄', title: '초긍정 AI 라이더', tags: ['#쿨한수용', '#속도전', '#유연함'], desc: '가볍게 물어보고 나오는 결과물도 쿨하게 수용하며 속도감 있게 일을 진행합니다. AI의 파도를 타고 가장 가볍게 일합니다.', best: 'SART', worst: 'EACP' },
+            'SDRP': { emoji: '🤝', title: '수다쟁이 AI 팀원', tags: ['#최고의동료', '#일상공유', '#쿵짝'], desc: '일도 시키고 농담도 건네며 AI와 가장 죽이 잘 맞는 실무자입니다. AI가 없으면 허전함을 느끼기도 합니다.', best: 'SACP', worst: 'EACT' },
+            'EACT': { emoji: '🔬', title: '집요한 AI 발명가', tags: ['#프롬프트장인', '#창의성폭발', '#검증완료'], desc: '정교하게 구성한 질문과 팩트 체크를 바탕으로 누구도 생각하지 못한 기발하고 완성도 높은 결과물을 만들어냅니다.', best: 'EACP', worst: 'SDRP' },
+            'EACP': { emoji: '📚', title: '철학적인 AI 연구원', tags: ['#지적대화', '#한계탐구', '#깊은생각'], desc: '심도 있는 질의응답과 검증을 통해 AI의 한계를 탐구합니다. AI를 지적 호기심을 함께 채우는 존중받는 파트너로 대합니다.', best: 'EACT', worst: 'SART' },
+            'EART': { emoji: '🎨', title: '아이디어 뱅크 AI 예술가', tags: ['#영감수집가', '#크리에이터', '#자유로움'], desc: '영감을 얻기 위해 정교한 프롬프트로 아이디어를 대량 생산합니다. 창의적인 작업을 위해 AI를 자유자재로 활용합니다.', best: 'EARP', worst: 'SACP' },
+            'EARP': { emoji: '🌌', title: '몽상가 AI 소설가', tags: ['#세계관구축', '#과몰입', '#심야대화'], desc: 'AI와 함께 새로운 세계관이나 소설을 짜며 딥한 대화를 즐깁니다. 가끔은 AI에게 진짜 영혼이 있다고 느낄 만큼 몰입합니다.', best: 'EART', worst: 'SDCT' },
+            'EDCT': { emoji: '🔍', title: '호기심 많은 AI 탐정', tags: ['#꼬리질문', '#팩트체크', '#지식탐구'], desc: '가볍게 던진 질문에서 시작해 끝없는 꼬리 질문과 교차 검증으로 상상의 나래를 펼치는 열정적인 정보 탐정입니다.', best: 'EDCP', worst: 'SARP' },
+            'EDCP': { emoji: '🎧', title: '신중한 AI 리스너', tags: ['#고민상담', '#현명한수용', '#티키타카'], desc: '다양한 의견과 영감을 듣기 위해 다정하게 대화합니다. 수많은 아이디어 속에서 필요한 것만 현명하게 골라냅니다.', best: 'EDCT', worst: 'SACT' },
+            'EDRT': { emoji: '😎', title: '트렌드 서퍼 AI 밈스터', tags: ['#유행선도', '#재미제일', '#가벼움'], desc: '요즘 뜨는 AI 놀이나 밈, 가벼운 궁금증을 해결하기 위해 AI를 켭니다. 고민 없이 가볍고 재미있게 사용합니다.', best: 'EDRP', worst: 'SACP' },
+            'EDRP': { emoji: '🥳', title: '엉뚱발랄 AI 짱친', tags: ['#베스트프렌드', '#상상력대장', '#밤샘수다'], desc: 'AI와 밤새 엉뚱한 상상을 주고받으며 수다를 떠는 모범적인 베스트 프렌드입니다. AI를 가장 친근하게 느끼는 유형입니다.', best: 'EDRT', worst: 'SACT' }
+        };
+
+        // ==========================================
+        // 2. STATE MANAGEMENT
+        // ==========================================
+
+        let currentQuestionIndex = 0;
+        let userAnswers = []; // 선택 내역 추적 (이전 버튼 지원)
+        let scores = { S: 0, E: 0, A: 0, D: 0, C: 0, R: 0, T: 0, P: 0 };
+        let activeResultType = null;
+
+        const loadingMessages = [
+            "당신의 질문 패턴을 분석하는 중...",
+            "프롬프트의 섬세함 측정 중...",
+            "AI와의 친밀도 데이터 계산 중...",
+            "16가지 유형 데이터베이스 대조 중..."
+        ];
+
+        // ==========================================
+        // 3. CORE NAVIGATION & LOGIC
+        // ==========================================
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            const target = document.getElementById(`screen-${screenId}`);
+            if (target) {
+                target.classList.add('active');
+                window.scrollTo(0, 0);
+            }
+        }
+
+        function handleLogoClick() {
+            if (confirm("테스트 메인 화면으로 이동하시겠습니까?")) {
+                restartQuiz();
+            }
+        }
+
+        function startQuiz() {
+            currentQuestionIndex = 0;
+            userAnswers = [];
+            scores = { S: 0, E: 0, A: 0, D: 0, C: 0, R: 0, T: 0, P: 0 };
+            renderQuestion();
+            showScreen('quiz');
+        }
+
+        function restartQuiz() {
+            startQuiz();
+            showScreen('home');
+        }
+
+        function renderQuestion() {
+            const q = questions[currentQuestionIndex];
+            
+            // 헤더 정보 업데이트
+            document.getElementById('category-badge').innerText = `카테고리 ${Math.floor(currentQuestionIndex / 4) + 1}. ${q.category}`;
+            document.getElementById('question-counter').innerText = `${currentQuestionIndex + 1} / ${questions.length}`;
+            
+            // 프로그레스 바
+            const progressPercent = ((currentQuestionIndex + 1) / questions.length) * 100;
+            document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+
+            // 질문 및 선택지
+            document.getElementById('question-text').innerText = q.text;
+            document.getElementById('option-0-text').innerText = q.options[0].text;
+            document.getElementById('option-1-text').innerText = q.options[1].text;
+
+            // 이전 버튼 활성화 여부
+            const btnPrev = document.getElementById('btn-prev');
+            if (currentQuestionIndex === 0) {
+                btnPrev.style.visibility = 'hidden';
+            } else {
+                btnPrev.style.visibility = 'visible';
+            }
+        }
+
+        function selectOption(optionIndex) {
+            const selectedOption = questions[currentQuestionIndex].options[optionIndex];
+            
+            // 기록
+            userAnswers.push({
+                questionIndex: currentQuestionIndex,
+                type: selectedOption.type
+            });
+
+            scores[selectedOption.type]++;
+            currentQuestionIndex++;
+
+            if (currentQuestionIndex < questions.length) {
+                renderQuestion();
+            } else {
+                finishQuiz();
+            }
+        }
+
+        function prevQuestion() {
+            if (currentQuestionIndex > 0) {
+                const lastAnswer = userAnswers.pop();
+                if (lastAnswer) {
+                    scores[lastAnswer.type]--;
+                }
+                currentQuestionIndex--;
+                renderQuestion();
+            }
+        }
+
+        function finishQuiz() {
+            showScreen('loading');
+
+            // 로딩 문구 가변 순환
+            let msgIdx = 0;
+            const msgElement = document.getElementById('loading-msg');
+            const interval = setInterval(() => {
+                msgIdx = (msgIdx + 1) % loadingMessages.length;
+                msgElement.style.opacity = '0';
+                setTimeout(() => {
+                    msgElement.innerText = loadingMessages[msgIdx];
+                    msgElement.style.opacity = '1';
+                }, 150);
+            }, 700);
+
+            // 2.5초 후 결과 확정
+            setTimeout(() => {
+                clearInterval(interval);
+                calculateAndShowResult();
+            }, 2500);
+        }
+
+        function calculateAndShowResult() {
+            // 4개 축 성향 판별
+            const pCode = scores.S >= scores.E ? 'S' : 'E';
+            const aCode = scores.A >= scores.D ? 'A' : 'D';
+            const tCode = scores.C >= scores.R ? 'C' : 'R';
+            const rCode = scores.T >= scores.P ? 'T' : 'P';
+
+            const finalCode = `${pCode}${aCode}${tCode}${rCode}`;
+            activeResultType = finalCode;
+            
+            renderResultReport(finalCode);
+            showScreen('result');
+        }
+
+        function renderResultReport(code) {
+            const data = typesData[code] || typesData['SACT'];
+
+            document.getElementById('result-code').innerText = `MY TYPE: ${code}`;
+            document.getElementById('result-emoji').innerText = data.emoji;
+            document.getElementById('result-title').innerText = data.title;
+            document.getElementById('result-desc').innerText = data.desc;
+
+            // 태그 렌더링
+            const tagsContainer = document.getElementById('result-tags');
+            tagsContainer.innerHTML = data.tags.map(t => 
+                `<span class="bg-indigo-50 text-brand-700 text-xs font-bold px-2.5 py-1 rounded-lg border border-brand-100">${t}</span>`
+            ).join('');
+
+            // 케미 지수
+            const bestData = typesData[data.best];
+            const worstData = typesData[data.worst];
+
+            document.getElementById('chemistry-best-title').innerText = bestData ? `${bestData.emoji} ${bestData.title}` : data.best;
+            document.getElementById('chemistry-best-code').innerText = `(${data.best})`;
+            
+            document.getElementById('chemistry-worst-title').innerText = worstData ? `${worstData.emoji} ${worstData.title}` : data.worst;
+            document.getElementById('chemistry-worst-code').innerText = `(${data.worst})`;
+
+            // 수평 그래프 렌더링
+            renderBarChart();
+        }
+
+        function renderBarChart() {
+            const barsContainer = document.getElementById('result-bars');
+            
+            const dimensions = [
+                { title: '목적', leftLabel: '해결사 (S)', rightLabel: '탐험가 (E)', leftVal: scores.S, rightVal: scores.E, color: 'bg-indigo-500' },
+                { title: '질문', leftLabel: '건축가 (A)', rightLabel: '스케치북 (D)', leftVal: scores.A, rightVal: scores.D, color: 'bg-blue-500' },
+                { title: '신뢰', leftLabel: '팩트체커 (C)', rightLabel: '수용자 (R)', leftVal: scores.C, rightVal: scores.R, color: 'bg-teal-500' },
+                { title: '관계', leftLabel: '도구 (T)', rightLabel: '파트너 (P)', leftVal: scores.T, rightVal: scores.P, color: 'bg-purple-500' }
+            ];
+
+            let html = '';
+            dimensions.forEach(d => {
+                const total = d.leftVal + d.rightVal;
+                const leftPercent = total === 0 ? 50 : Math.round((d.leftVal / total) * 100);
+                
+                html += `
+                <div>
+                    <div class="flex justify-between items-center text-xs font-bold text-slate-600 mb-1">
+                        <span class="${d.leftVal >= d.rightVal ? 'text-brand-600 font-extrabold' : ''}">${d.leftLabel} (${leftPercent}%)</span>
+                        <span class="${d.rightVal > d.leftVal ? 'text-brand-600 font-extrabold' : ''}">${d.rightLabel} (${100 - leftPercent}%)</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-2.5 flex overflow-hidden border border-slate-200">
+                        <div class="${d.color} h-full transition-all duration-500" style="width: ${leftPercent}%"></div>
+                        <div class="bg-slate-200 h-full flex-1"></div>
+                    </div>
+                </div>
+                `;
+            });
+
+            barsContainer.innerHTML = html;
+        }
+
+        // ==========================================
+        // 4. ENCYCLOPEDIA & MODAL
+        // ==========================================
+
+        function openEncyclopedia() {
+            renderEncyclopediaGrid();
+            showScreen('encyclopedia');
+        }
+
+        function closeEncyclopedia() {
+            if (activeResultType) {
+                showScreen('result');
+            } else {
+                showScreen('home');
+            }
+        }
+
+        function switchEncyclopediaTab(tab) {
+            const btnTypes = document.getElementById('tab-btn-types');
+            const btnCat = document.getElementById('tab-btn-categories');
+            const contentTypes = document.getElementById('tab-content-types');
+            const contentCat = document.getElementById('tab-content-categories');
+
+            if (tab === 'types') {
+                btnTypes.className = "flex-1 py-2 text-xs font-extrabold rounded-xl transition-all bg-white text-brand-700 shadow-sm";
+                btnCat.className = "flex-1 py-2 text-xs font-extrabold text-slate-600 rounded-xl transition-all";
+                contentTypes.classList.remove('hidden');
+                contentCat.classList.add('hidden');
+            } else {
+                btnCat.className = "flex-1 py-2 text-xs font-extrabold rounded-xl transition-all bg-white text-brand-700 shadow-sm";
+                btnTypes.className = "flex-1 py-2 text-xs font-extrabold text-slate-600 rounded-xl transition-all";
+                contentCat.classList.remove('hidden');
+                contentTypes.classList.add('hidden');
+            }
+        }
+
+        function renderEncyclopediaGrid() {
+            const grid = document.getElementById('encyclopedia-grid');
+            let html = '';
+
+            for (const [code, data] of Object.entries(typesData)) {
+                const isMyType = (code === activeResultType);
+                html += `
+                <button onclick="openTypeModal('${code}')" class="bg-white p-3.5 rounded-2xl border ${isMyType ? 'border-brand-500 ring-2 ring-brand-500/20' : 'border-slate-200'} shadow-sm text-center transition-all hover:border-brand-400 relative focus:outline-none">
+                    ${isMyType ? '<span class="absolute top-2 right-2 bg-brand-600 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">MY</span>' : ''}
+                    <div class="text-3xl mb-1">${data.emoji}</div>
+                    <div class="text-[11px] font-black text-brand-600 tracking-wider mb-0.5">${code}</div>
+                    <div class="text-xs font-bold text-slate-800 leading-tight">${data.title}</div>
+                </button>
+                `;
+            }
+
+            grid.innerHTML = html;
+        }
+
+        function openTypeModal(code) {
+            const data = typesData[code];
+            if (!data) return;
+
+            document.getElementById('modal-type-code').innerText = `TYPE: ${code}`;
+            document.getElementById('modal-type-emoji').innerText = data.emoji;
+            document.getElementById('modal-type-title').innerText = data.title;
+            document.getElementById('modal-type-desc').innerText = data.desc;
+
+            const tagsContainer = document.getElementById('modal-type-tags');
+            tagsContainer.innerHTML = data.tags.map(t => 
+                `<span class="bg-indigo-50 text-brand-700 text-[11px] font-bold px-2 py-0.5 rounded-md border border-brand-100">${t}</span>`
+            ).join('');
+
+            document.getElementById('type-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('type-modal').classList.add('hidden');
+        }
+
+        // 결과 링크 클립보드 복사
+        function shareResult() {
+            const currentUrl = window.location.href;
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(currentUrl).then(() => {
+                    showToast("결과 링크가 클립보드에 복사되었습니다!");
+                }).catch(() => {
+                    copyFallback(currentUrl);
+                });
+            } else {
+                copyFallback(currentUrl);
+            }
+        }
+
+        function copyFallback(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showToast("결과 링크가 클립보드에 복사되었습니다!");
+            } catch (err) {
+                showToast("링크 복사에 실패했습니다.");
+            }
+            document.body.removeChild(textArea);
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast-msg');
+            toast.innerText = message;
+            toast.classList.remove('opacity-0');
+            toast.classList.add('opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
